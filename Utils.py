@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-import psycopg, os, asyncio, requests
+import psycopg, os, asyncio
 
 load_dotenv()
 
