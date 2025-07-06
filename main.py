@@ -3,8 +3,8 @@ from fastapi.requests import Request
 from fastapi.responses import Response
 import uvicorn, Utils, os
 
-APP = FastAPI()
+app = FastAPI()
 
-@APP.route("/")
+@app.route("/")
 async def Login(request: Request):
     return Response()
