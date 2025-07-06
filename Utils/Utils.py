@@ -1,9 +1,12 @@
 import psycopg, os, asyncio
 from dotenv import load_dotenv
+from argon2 import PasswordHasher, profiles, exceptions as argon2_exceptions
 
 load_dotenv()
 
 class Database:
+
+    _conn_queue: asyncio.Queue[psycopg.AsyncConnection]
 
     def __init__(self, MaxSize: int = 1) -> None:
         self._conn_queue = asyncio.Queue(maxsize = MaxSize)
@@ -26,7 +29,14 @@ class Database:
     async def get_conn(self):
         return await self._conn_queue.get()
     
-    async def release_conn(self, conn: psycopg.AsyncConnection):
+    async def release_conn(self, conn: psycopg.AsyncConnection, cursor: list[psycopg.AsyncCursor]|psycopg.AsyncCursor|None = None):
+        if cursor:
+            if isinstance(cursor, list):
+                for cursor in cursor:
+                    await cursor.close()
+            else:
+                await cursor.close()
+            
         await self._conn_queue.put(conn)
 
     async def close_queue(self):
@@ -34,21 +44,24 @@ class Database:
             conn = await self._conn_queue.get()
             await conn.close()
     
-async def main():
-    DBs = Database()
-    await DBs.init_pool()
+class Criptografia:
 
-    conn = await DBs.get_conn()
+    hasher = PasswordHasher(
+            profiles.RFC_9106_HIGH_MEMORY.time_cost,
+            profiles.RFC_9106_HIGH_MEMORY.memory_cost,
+            profiles.RFC_9106_HIGH_MEMORY.parallelism,
+            profiles.RFC_9106_HIGH_MEMORY.hash_len,
+            profiles.RFC_9106_HIGH_MEMORY.salt_len
+        )
 
-    await conn.execute("""CREATE TABLE IF NOT EXISTS usuarios(
-                       id SERIAL PRIMARY KEY,
-                       nome VARCHAR(64) NOT NULL,
-                       email VARCHAR(128) NOT NULL UNIQUE,
-                       senha VARCHAR(255) NOT NULL
-                       )""")
-
-    await DBs.release_conn(conn)
-    await DBs.close_queue()
-
-if __name__ == "__main__":
-    print(asyncio.run(main()))
+    def hash(self, password: str) -> str:
+        return self.hasher.hash(password)
+    
+    def verify_hash(self, password: str, hash: str) -> bool:
+        try:
+            return self.hasher.verify(hash, password)
+        except argon2_exceptions.VerifyMismatchError:
+            return False
+        except Exception as Error:
+            print(Error)
+            return False
