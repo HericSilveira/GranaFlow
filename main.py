@@ -16,4 +16,5 @@ def keepAlive():
         time.sleep(60)
 
 if __name__ == "__main__":
+    Thread(target=keepAlive, daemon=True).start()
     uvicorn.run(app="main:app", host='0.0.0.0', port=8000)
