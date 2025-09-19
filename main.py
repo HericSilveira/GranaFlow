@@ -11,7 +11,7 @@ async def home():
 
 def keepAlive():
     while True:
-        with request.urlopen("") as response:
+        with request.urlopen("https://granaflow-c6wo.onrender.com/") as response:
             ...
         time.sleep(60)
 
